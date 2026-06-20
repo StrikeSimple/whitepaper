@@ -5,6 +5,8 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{float}
+\usepackage{adjustbox}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,shapes.arrows}
 % Color definitions to match the whiteboard markers (wheel diagram)
@@ -20,28 +22,28 @@
 \newcommand{\pos}[1]{\left(#1\right)^+}
 \newcommand{\Call}{\mathrm{CALL}}
 \newcommand{\Put}{\mathrm{PUT}}
-\newcommand{\CCR}{\mathrm{CCR}}
-\newcommand{\CSPR}{\mathrm{CSPR}}
+\newcommand{\CCR}{\mathrm{CCR}_{S_0}}
+\newcommand{\CSPR}{\mathrm{CSPR}_{S_0}}
 \newcommand{\BCSR}{\mathrm{BCSR}}
 \newcommand{\BPSR}{\mathrm{BPSR}}
-% Tranche labels --- underscore / subscript notation (CALL_N, CALL_P, ...)
-\newcommand{\CN}{\mathrm{CALL}_{N}}
-\newcommand{\CP}{\mathrm{CALL}_{P}}
-\newcommand{\PN}{\mathrm{PUT}_{N}}
-\newcommand{\PP}{\mathrm{PUT}_{P}}
-\newcommand{\CNP}{\mathrm{CALL}_{NP}}
-\newcommand{\CNN}{\mathrm{CALL}_{NN}}
-\newcommand{\PNP}{\mathrm{PUT}_{NP}}
-\newcommand{\PNN}{\mathrm{PUT}_{NN}}
-% Strike / index-tagged tranche labels (merged subscript avoids double subscripts)
-\newcommand{\CNat}[1]{\mathrm{CALL}_{N,\,#1}}
-\newcommand{\CPat}[1]{\mathrm{CALL}_{P,\,#1}}
-\newcommand{\PNat}[1]{\mathrm{PUT}_{N,\,#1}}
-\newcommand{\PPat}[1]{\mathrm{PUT}_{P,\,#1}}
-\newcommand{\CNPi}[1]{\mathrm{CALL}_{NP,\,#1}}
-\newcommand{\CNNi}[1]{\mathrm{CALL}_{NN,\,#1}}
-\newcommand{\PNPi}[1]{\mathrm{PUT}_{NP,\,#1}}
-\newcommand{\PNNi}[1]{\mathrm{PUT}_{NN,\,#1}}
+% Tranche labels --- full-size identifier with literal underscore (CALL_N, CALL_P, ...)
+\newcommand{\CN}{\mathrm{CALL\_N}}
+\newcommand{\CP}{\mathrm{CALL\_P}}
+\newcommand{\PN}{\mathrm{PUT\_N}}
+\newcommand{\PP}{\mathrm{PUT\_P}}
+\newcommand{\CNP}{\mathrm{CALL\_NP}}
+\newcommand{\CNN}{\mathrm{CALL\_NN}}
+\newcommand{\PNP}{\mathrm{PUT\_NP}}
+\newcommand{\PNN}{\mathrm{PUT\_NN}}
+% Strike-tagged tranche labels: full-size name, strike as a real (smaller) subscript
+\newcommand{\CNat}[1]{\mathrm{CALL\_N}_{#1}}
+\newcommand{\CPat}[1]{\mathrm{CALL\_P}_{#1}}
+\newcommand{\PNat}[1]{\mathrm{PUT\_N}_{#1}}
+\newcommand{\PPat}[1]{\mathrm{PUT\_P}_{#1}}
+\newcommand{\CNPi}[1]{\mathrm{CALL\_NP}_{#1}}
+\newcommand{\CNNi}[1]{\mathrm{CALL\_NN}_{#1}}
+\newcommand{\PNPi}[1]{\mathrm{PUT\_NP}_{#1}}
+\newcommand{\PNNi}[1]{\mathrm{PUT\_NN}_{#1}}
 % Placeholder marker for content still to be drafted (charts / diagrams / tables)
 \newcommand{\todo}[1]{\par\medskip\noindent{\color{wbred}\itshape[\textbf{TODO:} #1]}\par\medskip}
 
@@ -71,6 +73,8 @@
 \section{Setup and the Splitting Primitive}
 % =====================================================================
 
+\subsection{Mechanism and Prerequisites}
+
 \textbf{Maturity and clearing.} A position is opened against collateral and settled
 at a single maturity $m$. At maturity an oracle posts the terminal underlying price
 $X_m$ \emph{once}; every tranche then clears to a closed-form cash (or collateral)
@@ -81,8 +85,17 @@ life of the position.
 states: one unit of the underlying $T$ (terminal value $X_m$), or cash $C$ (in the
 put-side base split $C=S_0$).
 
-\textbf{The splitting primitive.} At a chosen strike $S$, any collateral position
-splits into an \emph{obligation residual} $P$ and a \emph{right} $N$,
+\textbf{Numeraire.} Payoffs are written in cash / numeraire value by default;
+collateral-unit forms (underlying-$T$ units, cash units) are given where useful.
+
+\textbf{Scope.} This section is a payoff \emph{decomposition}, not a pricing model.
+Premiums are set by the market; the math here only guarantees that the tranches
+partition the collateral's terminal value exactly.
+
+\subsection{The Splitting Primitive}
+
+At a chosen strike $S$, any collateral position splits into an \emph{obligation
+residual} $P$ and a \emph{right} $N$,
 \[
 \text{Collateral} \;=\; \underbrace{P}_{\text{residual}} \;+\; \underbrace{N}_{\text{right}},
 \qquad
@@ -91,186 +104,399 @@ P(X_m)+N(X_m)=\text{(terminal value of the collateral)}\ \ \forall X_m .
 This conservation identity is what makes every tranche \emph{fully collateralized}:
 the pieces always sum back to the collateral that backs them.
 
-\textbf{Tranche-address notation (the $P/N$ tree).} The suffix on each label is the
-path taken through the recursion. Starting from the collateral, each split sends the
-residual to a leaf ($P$) and keeps splitting the right ($N$):
-\[
-\begin{aligned}
-T \;\to\;& \{\,\CP \text{ (leaf)},\ \CN\,\}\\
-  \;\to\;& \CN \text{ splits into } \{\,\CNP \text{ (leaf)},\ \CNN\,\}\\
-  \;\to\;& \CNN \text{ splits again} \;\to\; \cdots
-\end{aligned}
-\]
-The strike ladder \emph{is} this recursion; the running index $i$ simply flattens the
-repeated-$N$ path, so $\CNPi{i}$ is the residual produced at the $i$-th split.
+\subsection{Tranche-Address Notation (the \texorpdfstring{$P/N$}{P/N} Tree)}
 
-\textbf{Numeraire.} Payoffs are written in cash / numeraire value by default;
-collateral-unit forms (underlying-$T$ units, cash units) are given where useful.
+The suffix on each label is the path taken through the recursion. Starting from the
+collateral, every split sends the obligation residual to a leaf ($P$, a tranche the
+holder keeps) and keeps splitting the right ($N$):
 
-\textbf{Scope.} This section is a payoff \emph{decomposition}, not a pricing model.
-Premiums are set by the market; the math here only guarantees that the tranches
-partition the collateral's terminal value exactly.
+\begin{center}
+\begin{tikzpicture}[
+  font=\small,
+  level 1/.style={level distance=15mm, sibling distance=48mm},
+  level 2/.style={level distance=15mm, sibling distance=30mm},
+  level 3/.style={level distance=15mm, sibling distance=24mm},
+  spine/.style={draw, inner sep=3pt, minimum width=11mm},
+  leaf/.style={draw, rounded corners, fill=wbblue!8, inner sep=3pt, align=center},
+  elab/.style={midway, font=\scriptsize, fill=white, inner sep=1pt},
+  edge from parent/.style={draw, -{Stealth[length=2mm]}},
+]
+\node[spine] {$T$}
+  child {node[spine] {$\CN$}
+    child {node[spine] {$\CNN$}
+      child {node {$\vdots$} edge from parent node[elab,left] {$N$}}
+      child {node[leaf] {$\mathrm{CALL\_NNP}$\\[-2pt]{\scriptsize$=\BCSR_{S_2}$}} edge from parent node[elab,right] {$P$}}
+      edge from parent node[elab,left] {$N$}
+    }
+    child {node[leaf] {$\CNP$\\[-2pt]{\scriptsize$=\BCSR_{S_1}$}} edge from parent node[elab,right] {$P$}}
+    edge from parent node[elab,left] {$N$}
+  }
+  child {node[leaf] {$\CP$\\[-2pt]{\scriptsize$=\CCR$}} edge from parent node[elab,right] {$P$}};
+\end{tikzpicture}
+\end{center}
 
-\subsection*{Notation}
+The strike ladder \emph{is} this recursion. Reading down the right edges gives the menu
+of tranches the protocol mints---$\CP$ (the covered-call residual $\CCR$), then
+$\CNP,\,\mathrm{CALL\_NNP},\dots$ (the bull-spread residuals $\BCSR_{S_1},\BCSR_{S_2},\dots$)---while
+the left spine carries the remaining call right down to the tail call $\Call_{S_n}$. The
+running index $i$ flattens the repeated-$N$ path, so $\BCSR_{S_i}$ is the residual produced
+at the $i$-th split.
+
+\subsection{Notation}
 
 \begin{longtable}{>{\raggedright\arraybackslash}p{0.23\linewidth}p{0.68\linewidth}}
 \toprule
 Symbol & Meaning \\
 \midrule
-$X$ & Underlying asset price. \\
-$X_m$ & Terminal underlying price at maturity $m$, expressed in cash/numeraire units. \\
-$T$ & One unit of underlying collateral. Its terminal cash value is $X_m$. \\
-$C$ & Cash collateral. In the put-side base split, $C=S_0$. \\
-$S$ & Strike price. \\
-$S_0$ & Strike price at the first split (the base strike). \\
-$S_i$ & The $i$-th strike price, where $i=1,\dots,n$ indexes the rungs of the ladder. Call ladder: $S_0<S_1<\cdots<S_n$; put ladder: $S_0>S_1>\cdots>S_n$. \\
-$P$ & Obligation residual. \\
-$N$ & Right component: call right or put right. \\
-$\Call_i$ & Tokenized call position struck at $S_i$ (a token, not a traded option); terminal value $\max(0,X_m-S_i)$. \\
-$\Put_i$ & Tokenized put position struck at $S_i$ (a token, not a traded option); terminal value $\max(0,S_i-X_m)$. \\
-$+\Call_i$ & Long the call token $\Call_i$. \\
-$-\Call_i$ & Short the call token $\Call_i$. \\
-$+\Put_i$ & Long the put token $\Put_i$. \\
-$-\Put_i$ & Short the put token $\Put_i$. \\
+$X$ & Spot price of the underlying (running). \\
+$X_m$ & Terminal underlying price at maturity $m$, in cash/numeraire units; the one value the oracle posts at clearing. \\
+$T$ & One unit of underlying collateral; terminal cash value $X_m$. \\
+$C$ & Cash collateral; in the put-side base split $C=S_0$. \\
+$S$ & A strike price (generic). \\
+$S_i$ & Strike of the $i$-th split, $i=0,\dots,n$; $S_0$ is the base strike. Call ladder: $S_0<S_1<\cdots<S_n$; put ladder: $S_0>S_1>\cdots>S_n$. \\
+$N$ & Right leg of a split: the long option right that is split off ($+\Call$ or $+\Put$); the only leg that splits again, i.e.\ the recursing branch of the tree. \\
+$P$ & Obligation-residual leg of a split: the collateral the writer keeps after the right $N$ is split off; it carries the short-option obligation. Every split obeys $\text{collateral}=P+N$. \\
+$\Call_{S_i}$ & Tokenized call position struck at $S_i$ (a token, not a traded option); terminal value $\max(0,X_m-S_i)$. \\
+$\Put_{S_i}$ & Tokenized put position struck at $S_i$ (a token, not a traded option); terminal value $\max(0,S_i-X_m)$. \\
+$\pm\Call_{S_i},\ \pm\Put_{S_i}$ & Long ($+$) / short ($-$) the corresponding token. \\
 $\mathrm{CC}$ & Covered call (strategy): hold the underlying and write a call against it, capping the upside above the strike in return for the premium. \\
-$\CCR_i$ (CALL\_P$_i$) & Covered-call residual token at rung $i$: the residual leg of the covered call $\mathrm{CC}$ applied at strike $S_i$. \\
+$\CCR$ (CALL\_P) & Covered-call residual token: the base-split residual leg $T-\Call_{S_0}$. Exists only at the base strike $S_0$. \\
 $\mathrm{CSP}$ & Cash-secured put (strategy): hold cash and write a put fully backed by that cash, taking on the obligation to buy the underlying below the strike. \\
-$\CSPR_i$ (PUT\_P$_i$) & Cash-secured-put residual token at rung $i$: the residual leg of the cash-secured put $\mathrm{CSP}$ applied at strike $S_i$. \\
-$\mathrm{BCS}$ & Bull call spread (strategy): buy a lower-strike call and sell a higher-strike call, for a bounded bullish payoff between the two strikes. \\
-$\BCSR_i$ (CALL\_NP$_i$) & Bull-call-spread residual token at rung $i$: the residual leg of the bull call spread $\mathrm{BCS}$ between strikes $S_{i-1}$ and $S_i$. \\
-$\mathrm{BPS}$ & Bear put spread (strategy): buy a higher-strike put and sell a lower-strike put, for a bounded bearish payoff between the two strikes. \\
-$\BPSR_i$ (PUT\_NP$_i$) & Bear-put-spread residual token at rung $i$: the residual leg of the bear put spread $\mathrm{BPS}$ between strikes $S_{i-1}$ and $S_i$. \\
+$\CSPR$ (PUT\_P) & Cash-secured-put residual token: the base-split residual leg $C-\Put_{S_0}$. Exists only at $S_0$. \\
+$\mathrm{BCS}$ & Bull call spread (strategy): long $\Call_{S_{i-1}}$, short $\Call_{S_i}$ (the $i$-th rung), a bounded bullish payoff between the two strikes. \\
+$\BCSR_{S_i}$ (CALL\_NP) & Bull-call-spread residual token at the $i$-th split ($i=1,\dots,n$): the residual leg of the bull call spread $\mathrm{BCS}$, between strikes $S_{i-1}$ and $S_i$. \\
+$\mathrm{BPS}$ & Bear put spread (strategy): long $\Put_{S_{i-1}}$, short $\Put_{S_i}$ (the $i$-th rung), a bounded bearish payoff between the two strikes. \\
+$\BPSR_{S_i}$ (PUT\_NP) & Bear-put-spread residual token at the $i$-th split ($i=1,\dots,n$): the residual leg of the bear put spread $\mathrm{BPS}$, between strikes $S_{i-1}$ and $S_i$. \\
 \bottomrule
 \end{longtable}
 
-All formulas below are terminal payoff formulas unless explicitly written in
-collateral-token units.
-
+\clearpage
 % =====================================================================
 \section{Route Strategy Map}
 % =====================================================================
 
-The route strategy map is the index for everything that follows. From each collateral
-state it shows the base split into a residual and a right, and the recursive split of
-the right along the strike ladder into the vertical-spread residuals --- enumerating
-the full menu of tranches. Each strategy in Sections~3--4 is a labeled route on this
-map; the wheel of Section~5 is the cycle that connects the two collateral states.
+\begin{figure}[H]
+\centering
+\adjustbox{max width=\textwidth,max totalheight=0.8\textheight,center}{%
+\begin{tikzpicture}[
+  font=\sffamily,
+  box/.style={draw, rectangle, minimum width=2.2cm, minimum height=1cm, align=center, line width=0.8pt},
+  ell/.style={draw, ellipse, minimum width=2cm, minimum height=1.1cm, align=center, line width=0.8pt},
+  >={Stealth[length=3mm]},
+  arrline/.style={->, line width=0.8pt},
+]
 
-\todo{Route strategy map figure: collateral state $\to$ side (call / put) $\to$ base
-split $\to$ recursive split $\to$ tranche menu ($\CP,\CN,\CNP,\CNN;\ \PP,\PN,\PNP,\PNN$).
-Overview / index figure; the per-strategy diagrams in Sections~3--4 are zoom-ins of it.}
+% ============ Graph title ============
+\node[font=\Large\bfseries] at (6.4,11.0) {StrikeX route strategy map};
+
+% (T base-split equation: moved below the figure)
+
+% ============ BCSR boxes (top) ============
+\node[box] (bcsr1) at (2.6,9.0) {$\mathrm{CALL}_{S_0}-\mathrm{CALL}_{S_1}$};
+\node[align=center, font=\small, color=wbblue] at (2.6,9.85) {BCSR};
+
+\node[box] (bcsr2top) at (11.0,9.0) {$\mathrm{CALL}_{S_{i-1}}-\mathrm{CALL}_{S_i}$};
+\node[align=center, font=\small, color=wbblue] at (11.0,9.85) {BCSR};
+\node[box] (bcsr2bot) at (11.0,7.0) {$+\mathrm{CALL}_{S_i}$};
+\node at (11.0,8.0) {$+$};
+
+% (CALL-NP / CALL-NN payoffs: moved below the figure)
+
+% ============ +CALL boxes (middle-upper) ============
+\node[box] (callS0) at (2.6,6.6) {$+\mathrm{CALL}_{S_0}$};
+\node[box] (callS1) at (5.8,6.6) {$+\mathrm{CALL}_{S_1}$};
+
+% ============ Entry arrow T (big arrow, left) ============
+\node[single arrow, draw, line width=0.8pt, minimum width=1.4cm, minimum height=2.4cm,
+      single arrow head extend=2mm, color=wbred, rotate=0] (Tentry) at (0.6,4.9) {\color{black}\large $T$};
+
+% ============ CCR: T - CALL_S0 ============
+\node[box] (ccr) at (4.0,4.9) {$T-\mathrm{CALL}_{S_0}$};
+\node[align=center, font=\small, color=wbblue] at (4.0,5.75) {CCR};
+
+% ============ Cash ellipse ============
+\node[ell] (cash1) at (8.7,4.9) {Cash};
+
+% ============ T ellipse (lower) ============
+\node[ell] (Tell) at (4.0,2.4) {$T$};
+
+% ============ CSPR: Cash - PUT_S0 ============
+\node[box] (cspr) at (8.7,2.4) {$\mathrm{Cash}-\mathrm{PUT}_{S_0}$};
+\node[align=center, font=\small, color=wbgreen] at (8.7,1.55) {CSPR};
+
+% ============ Cash entry arrow (right) ============
+\node[single arrow, draw, line width=0.8pt, minimum width=1.4cm, minimum height=2.4cm,
+      single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black} Cash};
+
+% ============ +PUT boxes ============
+\node[box] (putS0) at (9.7,0.1) {$+\mathrm{PUT}_{S_0}$};
+\node[box] (putS1) at (6.5,0.1) {$+\mathrm{PUT}_{S_1}$};
+\node[box] (bpsr1) at (9.7,-2.3) {$\mathrm{PUT}_{S_0}-\mathrm{PUT}_{S_1}$};
+\node[align=center, font=\small, color=wbgreen] at (9.7,-3.15) {BPSR};
+
+% ============ General-step vertical stack (+PUT_Si over PUT_{Si-1}-PUT_Si) ============
+\node[box] (putSi) at (1.8,-0.3) {$+\mathrm{PUT}_{S_i}$};
+\node at (1.8,-1.3) {$+$};
+\node[box] (bpsr2) at (1.8,-2.3) {$\mathrm{PUT}_{S_{i-1}}-\mathrm{PUT}_{S_i}$};
+\node[align=center, font=\small, color=wbgreen] at (1.8,-3.15) {BPSR};
+
+% (Cash base-split equation: moved below the figure)
+
+% (PUT-NP / PUT-NN payoffs: moved below the figure)
+
+% ===================== ARROWS =====================
+
+% +CALL_{S_0} fans out: spread residual (CALL_{S_0}-CALL_{S_1}) and carry (+CALL_{S_1})
+\draw[arrline] (callS0) -- (callS1);
+\draw[arrline] (callS0.north) -- (bcsr1.south);
+% +CALL_{S_1} -> up then right (90 deg) -> ... -> middle of the general-step stack
+\node (ccdots) at (8.4,8.0) {$\cdots$};
+\draw[arrline] (callS1.north) |- (ccdots.west);
+\draw[arrline] (ccdots.east) -- ($(bcsr2top.west)!0.5!(bcsr2bot.west)$);
+
+% Entry T arrow up to +CALL_S0   (label C.N)
+\draw[arrline] (Tentry.north) |- node[pos=0.25, left, font=\small] {} (callS0.west);
+% (C.N entry weight: moved below the figure)
+
+% Entry T -> CCR box (label C.P) -- the lower split going right into T-CALL
+\draw[arrline] (Tentry.east) -- (ccr.west);
+
+% CCR -> Cash  (Xm >= S)
+\draw[arrline] (ccr.east) -- node[pos=0.45, above, font=\small] {$X_m\ge S$} (cash1.west);
+
+% CCR -> T ellipse (Xm < S)  downward
+\draw[arrline] (ccr.south) -- node[pos=0.5, right, font=\small] {$X_m<S$} (Tell.north);
+
+% Cash -> CSPR (right loop down):  Cash to cashentry then into CSPR
+\draw[arrline] (cash1.east) -| (cashentry.north);
+
+% cashentry -> CSPR  (P.P label)
+\draw[arrline] (cashentry.west) -- (cspr.east);
+
+% CSPR -> T ellipse  (Xm <= S)
+\draw[arrline] (cspr.west) -- node[pos=0.5, above, font=\small] {$X_m\le S$} (Tell.east);
+
+% CSPR -> Cash (Xm > S) upward green
+\draw[arrline] (cspr.north) -- node[pos=0.6, left, font=\small] {$X_m>S$} (cash1.south);
+
+% cashentry -> +PUT_S0 (P.N label)
+\draw[arrline] (cashentry.south) |- node[pos=0.25, right, font=\small] {} (putS0.east);
+% (P.N entry weight: moved below the figure)
+
+% putS0 -> left -> putS1
+\draw[arrline] (putS0.west) -- (putS1.east);
+% putS0 -> straight down -> middle of bpsr1
+\draw[arrline] (putS0.south) -- (bpsr1.north);
+% +PUT_{S_1} -> down then left (90 deg) -> ... -> middle of the general-step stack
+\node (pcdots) at (4.7,-1.3) {$\cdots$};
+\draw[arrline] (putS1.south) |- (pcdots.east);
+\draw[arrline] (pcdots.west) -- ($(putSi.east)!0.5!(bpsr2.east)$);
+
+% Tell -> back to entry T (blue feedback loop, lower)
+\draw[arrline] (Tell.west) -| (Tentry.south);
+
+% (removed return path: keep a single arrow T -> +CALL_{S_0})
+
+% ===================== LEGEND (bottom-left) =====================
+\begin{scope}[shift={(0,-4.0)}]
+  \node[single arrow, draw, color=wbred, line width=0.8pt, minimum width=0.6cm,
+        minimum height=1.1cm, single arrow head extend=1.5mm] (le) at (0,0) {};
+  \node[anchor=west, color=wbred] at (0.7,0) {: entry};
+  \node[draw, rectangle, line width=0.8pt, minimum width=0.7cm, minimum height=0.5cm] at (0,-0.9) {};
+  \node[anchor=west] at (0.7,-0.9) {: ERC-20};
+  \node[draw, ellipse, line width=0.8pt, minimum width=0.85cm, minimum height=0.55cm] at (0,-1.8) {};
+  \node[anchor=west] at (0.7,-1.8) {: clearing results};
+\end{scope}
+
+\end{tikzpicture}%
+}
+\caption{Route strategy map. From each collateral state, the base split yields an
+obligation residual ($P$, the $\CCR$/$\CSPR$ token) and a right ($N$); the residuals
+settle to cash or $T$ at maturity according to $X_m$ vs.\ the strike $S$, while the
+rights recurse along the strike ladder into the vertical-spread residuals
+$\BCSR$/$\BPSR$.}
+\label{fig:routemap}
+\end{figure}
+
+Figure~\ref{fig:routemap} indexes the whole construction: each strategy of Sections~3--4
+is one labeled route on this map, and Section~5 reads the same graph as a reinvestment
+cycle.
 
 % =====================================================================
-\section{Call Side}
+\section{Long Underlying Assets}
 % =====================================================================
 
-Begin with one unit of underlying collateral $T$, whose terminal value is $X_m$. At the
-base strike $S_0$ the underlying splits into an obligation residual and a right:
+A long position in the underlying $T$ (terminal value $X_m$) is tokenized into a ladder
+of call-side tranches. The base split (Section~3.1) carves $T$ into a long-call token and
+a covered-call residual; the recursive split (Section~3.2) carves the long-call token into
+bull-call-spread tranches along the strike ladder; and the whole ladder conserves back to
+$X_m$ (Section~3.3).
+
+% ---------------------------------------------------------------------
+\subsection{Call-Side Base Split \& Covered Call}
+% ---------------------------------------------------------------------
+
+\begin{center}
+\begin{tikzpicture}[
+  font=\sffamily,
+  box/.style={draw, rectangle, minimum width=2.3cm, minimum height=0.85cm, align=center, line width=0.8pt},
+  ell/.style={draw, ellipse, minimum width=1.5cm, minimum height=0.9cm, align=center, line width=0.8pt},
+  >={Stealth[length=2.5mm]},
+  arrline/.style={->, line width=0.8pt},
+]
+\node[single arrow, draw, line width=0.8pt, minimum width=0.9cm, minimum height=1.5cm,
+      single arrow head extend=1.5mm, color=wbred] (Tentry) at (0,1.3) {\color{black}\large $T$};
+\node[box] (callS0) at (3.1,3.2) {$+\mathrm{CALL}_{S_0}$};
+\node[font=\small, color=wbblue] at (3.1,3.95) {$\CN$};
+\node[box] (ccr) at (3.1,1.3) {$T-\mathrm{CALL}_{S_0}$};
+\node[font=\small, color=wbblue] at (3.1,2.05) {$\CP$ (CCR)};
+\node[ell] (cash1) at (6.9,1.3) {Cash};
+\node[ell] (Tell) at (3.1,-0.7) {$T$};
+\draw[arrline] (Tentry.north) |- (callS0.west);
+\draw[arrline] (Tentry.east) -- (ccr.west);
+\draw[arrline] (ccr.east) -- node[pos=0.5,above,font=\small] {$X_m\ge S$} (cash1.west);
+\draw[arrline] (ccr.south) -- node[pos=0.5,right,font=\small] {$X_m<S$} (Tell.north);
+\end{tikzpicture}
+\end{center}
+
+We start \emph{long the underlying}: one unit of collateral $T$, worth $X_m$ at maturity.
+At the base strike $S_0$ this long position is tokenized into two ERC-20 tranches---a right
+$N$ and a residual $P$:
+\[
+T = (N,P) \;\longmapsto\; \CN\ \text{(long-call token)} \;+\; \CP\ \text{(covered-call residual)} .
+\]
+
+\textbf{(a) Splitting.} At $S_0$ the underlying splits into the covered-call residual (the
+underlying minus the written call) and the call right:
 \begin{align}
 T &= (T-\Call_{S_0}) + \Call_{S_0},\\
 T &= \CPat{S_0} + \CNat{S_0}.
 \end{align}
-The residual $\CPat{S_0}$ is the covered-call position (Section~3.2); the right
-$\CNat{S_0}$ is the long call (Section~3.1), which is split further along the ladder
-into bull call spreads (Section~3.3). Every call-side tranche conserves to $X_m$.
+$\CPat{S_0}=T-\Call_{S_0}$ is the covered-call leg---long the underlying, short the $S_0$
+call, so its upside is capped at $S_0$. $\CNat{S_0}=\Call_{S_0}$ is the long-call leg---the
+uncapped upside above $S_0$, collateralized by the residual holder.
 
-% ---------------------------------------------------------------------
-\subsection{Long Call \texorpdfstring{($\CN$)}{(CALL\_N)}}
-% ---------------------------------------------------------------------
-
-\textbf{How it works.} The long call is the \emph{right} half of the base split: a
-tokenized call position struck at $S_0$. Its holder owns the uncapped upside above
-$S_0$ and nothing below, while the matching residual ($\CP$) keeps the underlying that
-collateralizes it. It is the bullish, long-exposure tranche, and the only leg that
-splits further down the ladder.
-
-\textbf{Splitting.} From the base split $T=\CPat{S_0}+\CNat{S_0}$, the long call is the
-right component
+\textbf{(b) Settlement.} At maturity each token clears to a closed form:
 \begin{align}
-\CNat{S_0} &= \Call_{S_0}.
+\CNat{S_0}(X_m) &= \pos{X_m-S_0}=\max(0,X_m-S_0),\\
+\CPat{S_0}(X_m) &= X_m-\pos{X_m-S_0}=\min(X_m,S_0).
 \end{align}
-
-\textbf{Clearing (settlement).}
+The covered-call leg converts the underlying into cash $S_0$ when the call is assigned
+($X_m\ge S_0$) and keeps the underlying $T$, worth $X_m$, otherwise. The two legs conserve:
 \begin{align}
-\CNat{S_0}(X_m) &= \pos{X_m-S_0}=\max(0,X_m-S_0).
+\CPat{S_0}(X_m)+\CNat{S_0}(X_m)=\min(X_m,S_0)+\pos{X_m-S_0}=X_m.
 \end{align}
-In underlying-collateral units, when $X_m>0$:
-\begin{align}
-\CNat{S_0}^{\,T}(X_m) &= \max\!\left(0,1-\frac{S_0}{X_m}\right)T.
-\end{align}
-
-\todo{Split + clearing diagram for the long call (zoom-in of the wheel: the $\CN$ right leg).}
-\todo{Settlement chart: $\CNat{S_0}(X_m)$ vs.\ underlying USD price $X_m$ (flat $0$ up to $S_0$, then $45^\circ$).}
-\todo{Settlement table for this tranche across $X_m$ (the $\CN$ column of the combined table in Section~3.4).}
-
-% ---------------------------------------------------------------------
-\subsection{Covered Call \texorpdfstring{($\CP$ / $\CCR$)}{(CALL\_P / CCR)}}
-% ---------------------------------------------------------------------
-
-\textbf{How it works.} The covered call is the \emph{residual} half of the base split:
-the underlying minus the call that was sold off. Its holder keeps the asset below $S_0$
-and is converted to cash $S_0$ above it --- the classic covered-call writer's position,
-with upside capped at the strike.
-
-\textbf{Splitting.} From the base split,
-\begin{align}
-\CPat{S_0} &= T-\Call_{S_0}.
-\end{align}
-
-\textbf{Clearing (settlement).}
-\begin{align}
-\CPat{S_0}(X_m) &= \CCR_{S_0}(X_m)=X_m-\pos{X_m-S_0}=\min(X_m,S_0).
-\end{align}
-Settlement semantics: if $X_m\ge S_0$ the call is assigned and the residual converts the
-underlying into cash $S_0$; if $X_m<S_0$ it retains the underlying $T$, worth $X_m$. In
-underlying-collateral units, when $X_m>0$:
-\begin{align}
-\CPat{S_0}^{\,T}(X_m) &= \min\!\left(1,\frac{S_0}{X_m}\right)T.
-\end{align}
-Conservation with the long call:
-\begin{align}
-\CPat{S_0}(X_m)+\CNat{S_0}(X_m)
-&=\min(X_m,S_0)+\pos{X_m-S_0}=X_m.
-\end{align}
-
-\todo{Split + clearing diagram for the covered call (the $\CCR$ node: $T\!\to\!$Cash when $X_m\ge S$, keep $T$ when $X_m<S$).}
-\todo{Settlement chart: $\CPat{S_0}(X_m)$ vs.\ underlying USD price $X_m$ ($45^\circ$ then capped flat at $S_0$).}
-\todo{Settlement table for this tranche across $X_m$ (the $\CP$ column of the combined table in Section~3.4).}
-
-% ---------------------------------------------------------------------
-\subsection{Bull Call Spread \texorpdfstring{($\CNP$ / $\BCSR$)}{(CALL\_NP / BCSR)}}
-% ---------------------------------------------------------------------
-
-\textbf{How it works.} Recursively split the call right at the next rung. For a call
-ladder with increasing strikes
+In underlying-collateral units ($X_m>0$),
 \[
-S_0<S_1<\cdots<S_n,
+\CPat{S_0}^{\,T}=\min\!\left(1,\tfrac{S_0}{X_m}\right)T,
+\qquad
+\CNat{S_0}^{\,T}=\max\!\left(0,1-\tfrac{S_0}{X_m}\right)T.
 \]
-each lower-strike call splits into a capped bull call spread residual plus the
-higher-strike call that is carried further down the ladder.
 
-\textbf{Splitting.} For $i=1,\dots,n$:
+\textbf{(c) Settlement charts.} The two legs are the standard long-call and covered-call
+payoffs (USD settlement value vs.\ underlying price $X_m$):
+
+\begin{center}
+\begin{tikzpicture}[scale=0.78,>={Stealth[length=2mm]},font=\small]
+  \draw[->] (-0.15,0) -- (4.4,0) node[right]{$X_m$};
+  \draw[->] (0,-0.15) -- (0,2.6) node[above]{value};
+  \draw[black!45] (0,0) -- (2.55,2.55) node[black!55,font=\scriptsize,above left=-2pt]{$X_m$};
+  \draw[dotted] (2,0) -- (2,1.85);
+  \node[below] at (2,-0.05) {$S_0$};
+  \draw[wbblue,very thick] (0,0) -- (2,0) -- (3.85,1.85);
+  \node[below] at (2.0,-0.62) {long-call leg $\CN$};
+\end{tikzpicture}
+\hspace{0.9cm}
+\begin{tikzpicture}[scale=0.78,>={Stealth[length=2mm]},font=\small]
+  \draw[->] (-0.15,0) -- (4.4,0) node[right]{$X_m$};
+  \draw[->] (0,-0.15) -- (0,2.6) node[above]{value};
+  \draw[black!45] (0,0) -- (2.55,2.55) node[black!55,font=\scriptsize,above left=-2pt]{$X_m$};
+  \draw[dotted] (2,0) -- (2,2);
+  \draw[dotted] (0,2) -- (2,2);
+  \node[below] at (2,-0.05) {$S_0$};
+  \node[left] at (-0.05,2) {$S_0$};
+  \draw[wbblue,very thick] (0,0) -- (2,2) -- (4.1,2);
+  \node[below] at (2.0,-0.62) {covered-call leg $\CP$};
+\end{tikzpicture}
+\end{center}
+
+% ---------------------------------------------------------------------
+\subsection{Call-Side Recursive Split \& Bull Call Spread}
+% ---------------------------------------------------------------------
+
+\begin{center}
+\begin{tikzpicture}[
+  font=\sffamily,
+  box/.style={draw, rectangle, minimum width=2.0cm, minimum height=0.85cm, align=center, line width=0.8pt},
+  >={Stealth[length=2.5mm]},
+  arrline/.style={->, line width=0.8pt},
+]
+\node[box] (callS0) at (0,0) {$+\mathrm{CALL}_{S_0}$};
+\node[box] (bcsr1) at (0,1.9) {$\mathrm{CALL}_{S_0}-\mathrm{CALL}_{S_1}$};
+\node[font=\small,color=wbblue] at (0,2.62) {BCSR};
+\node[box] (callS1) at (3.1,0) {$+\mathrm{CALL}_{S_1}$};
+\node (ccdots) at (4.9,1.0) {$\cdots$};
+\node[box] (bcsr2top) at (8.1,1.9) {$\mathrm{CALL}_{S_{i-1}}-\mathrm{CALL}_{S_i}$};
+\node[font=\small,color=wbblue] at (8.1,2.62) {BCSR};
+\node[box] (bcsr2bot) at (8.1,0) {$+\mathrm{CALL}_{S_i}$};
+\node at (8.1,0.95) {$+$};
+\draw[arrline] (callS0.east) -- (callS1.west);
+\draw[arrline] (callS0.north) -- (bcsr1.south);
+\draw[arrline] (callS1.north) |- (ccdots.west);
+\draw[arrline] (ccdots.east) -- ($(bcsr2top.west)!0.5!(bcsr2bot.west)$);
+\end{tikzpicture}
+\end{center}
+
+The long-call token $\CN$ is itself split at the next rung. For a call ladder with
+increasing strikes $S_0<S_1<\cdots<S_n$, each lower-strike call right splits into a capped
+bull-call-spread residual plus the higher-strike call carried further down the ladder.
+
+\textbf{(a) Splitting.} For $i=0,\dots,n-1$, the call right $\CNat{S_i}$ is split at the
+next strike $S_{i+1}$:
 \begin{align}
-\CNat{S_{i-1}}
-&=(\Call_{S_{i-1}}-\Call_{S_i})+\Call_{S_i},\\
-\CNat{S_{i-1}}
-&=\CNPi{i}+\CNNi{i}.
+\CNat{S_i} &=(\Call_{S_i}-\Call_{S_{i+1}})+\Call_{S_{i+1}},\\
+\CNat{S_i} &=\CNPi{S_{i+1}}+\CNNi{S_{i+1}}.
 \end{align}
+$\CNPi{S_{i+1}}$ is the bull-call-spread residual (long the $S_i$ call, short the
+$S_{i+1}$ call); $\CNNi{S_{i+1}}$ is the higher-strike tail call --- itself the call
+right $\CNat{S_{i+1}}$ handed to the next rung, which splits again.
 
-\textbf{Clearing (settlement).}
+\textbf{(b) Settlement.}
 \begin{align}
-\CNPi{i}(X_m)
-&=\pos{X_m-S_{i-1}}-\pos{X_m-S_i},\\
-&=\min\!\left(\max(0,X_m-S_{i-1}),\,S_i-S_{i-1}\right),\\
-\CNNi{i}(X_m)
-&=\pos{X_m-S_i}=\max(0,X_m-S_i).
+\CNPi{S_{i+1}}(X_m) &=\pos{X_m-S_i}-\pos{X_m-S_{i+1}}
+=\min\!\left(\max(0,X_m-S_i),\,S_{i+1}-S_i\right),\\
+\CNNi{S_{i+1}}(X_m) &=\pos{X_m-S_{i+1}}=\max(0,X_m-S_{i+1}).
 \end{align}
-Sign convention check: $S_i-S_{i-1}>0$, so $\CNPi{i}(X_m)\ge 0$ and is capped at
-$S_i-S_{i-1}$.
+Since $S_{i+1}-S_i>0$, the spread residual is non-negative and capped at $S_{i+1}-S_i$.
 
-\todo{Split + clearing diagram for the bull call spread (zoom-in: $\CN \to \CNP + \CNN$ at strike $S_i$).}
-\todo{Settlement chart: $\CNPi{i}(X_m)$ vs.\ underlying USD price $X_m$ (flat, ramp $S_{i-1}\!\to\!S_i$, flat cap $S_i-S_{i-1}$).}
-\todo{Settlement table for this tranche across $X_m$ (the $\CNP$ column of the combined table in Section~3.4).}
+\textbf{(c) Settlement charts.} The bull-spread leg is capped between adjacent strikes; the
+tail call is an ordinary long call struck at $S_{i+1}$:
+
+\begin{center}
+\begin{tikzpicture}[scale=0.78,>={Stealth[length=2mm]},font=\small]
+  \draw[->] (-0.15,0) -- (4.4,0) node[right]{$X_m$};
+  \draw[->] (0,-0.15) -- (0,2.3) node[above]{value};
+  \draw[black!45] (0,0) -- (2.2,2.2) node[black!55,font=\scriptsize,above left=-2pt]{$X_m$};
+  \draw[dotted] (1.5,0) -- (1.5,1.3);
+  \draw[dotted] (2.8,0) -- (2.8,1.3);
+  \draw[dotted] (0,1.3) -- (2.8,1.3);
+  \node[below] at (1.5,-0.05) {$S_i$};
+  \node[below] at (2.8,-0.05) {$S_{i+1}$};
+  \node[left] at (-0.05,1.3) {\scriptsize $S_{i+1}\!-\!S_i$};
+  \draw[wbblue,very thick] (0,0) -- (1.5,0) -- (2.8,1.3) -- (4.1,1.3);
+  \node[below,align=center] at (2.0,-0.82) {bull-spread leg $\CNP$};
+\end{tikzpicture}
+\hspace{0.9cm}
+\begin{tikzpicture}[scale=0.78,>={Stealth[length=2mm]},font=\small]
+  \draw[->] (-0.15,0) -- (4.4,0) node[right]{$X_m$};
+  \draw[->] (0,-0.15) -- (0,2.3) node[above]{value};
+  \draw[black!45] (0,0) -- (2.2,2.2) node[black!55,font=\scriptsize,above left=-2pt]{$X_m$};
+  \draw[dotted] (2.8,0) -- (2.8,1.3);
+  \node[below] at (2.8,-0.05) {$S_{i+1}$};
+  \draw[wbblue,very thick] (0,0) -- (2.8,0) -- (4.15,1.35);
+  \node[below,align=center] at (2.0,-0.82) {tail-call leg $\CNN$};
+\end{tikzpicture}
+\end{center}
 
 % ---------------------------------------------------------------------
 \subsection{Call-Side Conservation: Combined Chart and Table}
@@ -279,7 +505,7 @@ $S_i-S_{i-1}$.
 After recursively splitting to $S_n$, the full call-side ladder identity is
 \begin{align}
 X_m
-&=\CCR_{S_0}(X_m)+\sum_{i=1}^{n}\BCSR_i(X_m)+\Call_{S_n}(X_m),\\
+&=\CCR(X_m)+\sum_{i=1}^{n}\BCSR_{S_i}(X_m)+\Call_{S_n}(X_m),\\
 &=\min(X_m,S_0)
 +\sum_{i=1}^{n}\left[\pos{X_m-S_{i-1}}-\pos{X_m-S_i}\right]
 +\pos{X_m-S_n},\\
@@ -318,7 +544,37 @@ $X_m$ & $\CP$ & $\CNP$ & $\CNN$ & Total \\
 \end{tabular}
 \end{center}
 
-\todo{Combined call-side chart: stack $\CP$, $\CNP$, $\CNN$ as USD settlement value vs.\ underlying price $X_m$, showing they sum to the $45^\circ$ line $X_m$.}
+\textbf{Combined chart.} Stacking the tokens at every price fills exactly up to the
+$45^\circ$ line $X_m$ --- the visual statement of conservation ($S_0=2000$, $S_1=2500$):
+
+\begin{center}
+\begin{tikzpicture}[scale=1.1,>={Stealth[length=2mm]},font=\small]
+  % stacked bands (cumulative): CALL_P, then +CALL_NP, then +CALL_NN = X_m
+  \fill[wbblue!20]  (0,0) -- (2,2) -- (3.6,2) -- (3.6,0) -- cycle;
+  \fill[wbgreen!25] (0,0) -- (2,2) -- (3.6,2) -- (3.6,2.5) -- (2.5,2.5) -- cycle;
+  \fill[wbred!16]   (0,0) -- (2.5,2.5) -- (3.6,2.5) -- (3.6,3.6) -- cycle;
+  % axes
+  \draw[->] (-0.15,0) -- (4.1,0) node[right]{$X_m$};
+  \draw[->] (0,-0.15) -- (0,3.95) node[above]{settlement value};
+  % total (45 degrees)
+  \draw[black,thick] (0,0) -- (3.6,3.6);
+  \node[above left] at (3.55,3.55) {$X_m$};
+  % cumulative boundary lines
+  \draw[wbblue!70!black,thick] (0,0) -- (2,2) -- (3.6,2);
+  \draw[wbgreen!55!black,thick] (0,0) -- (2.5,2.5) -- (3.6,2.5);
+  % strike ticks
+  \draw[dotted] (2,0) -- (2,2);   \node[below] at (2,-0.05) {$S_0$};
+  \draw[dotted] (2.5,0) -- (2.5,2.5); \node[below] at (2.62,-0.05) {$S_1$};
+  % band labels
+  % band labels: a right-side column, each with a flat left-pointing arrow into its band
+  \draw[->,black!55] (3.8,1.0)  -- (3.2,1.0);
+  \node[anchor=west,font=\footnotesize] at (3.85,1.0)  {$\CP$};
+  \draw[->,black!55] (3.8,2.25) -- (3.3,2.25);
+  \node[anchor=west,font=\footnotesize] at (3.85,2.25) {$\CNP$};
+  \draw[->,black!55] (3.8,3.0)  -- (3.3,3.0);
+  \node[anchor=west,font=\footnotesize] at (3.85,3.0)  {$\CNN$};
+\end{tikzpicture}
+\end{center}
 
 % =====================================================================
 \section{Put Side}
@@ -381,7 +637,7 @@ writer's position, used to acquire the underlying at a discount.
 
 \textbf{Clearing (settlement).}
 \begin{align}
-\PPat{S_0}(X_m)&=\CSPR_{S_0}(X_m)=S_0-\pos{S_0-X_m}=\min(X_m,S_0).
+\PPat{S_0}(X_m)&=\CSPR(X_m)=S_0-\pos{S_0-X_m}=\min(X_m,S_0).
 \end{align}
 Settlement semantics: if $X_m\le S_0$ the put is assigned and the residual converts the
 cash into the underlying $T$; if $X_m>S_0$ it keeps the cash $S_0$. In cash-collateral
@@ -400,7 +656,7 @@ Conservation with the long put:
 \todo{Settlement table for this tranche across $X_m$ (the $\PP$ column of the combined table in Section~4.4).}
 
 % ---------------------------------------------------------------------
-\subsection{Bear Put Spread \texorpdfstring{($\PNP$ / $\BPSR$)}{(PUT\_NP / BPSR)}}
+\subsection{Bear Put Spread \texorpdfstring{($\PNP$ / $\BPSR_{S_i}$)}{(PUT\_NP / BPSR)}}
 % ---------------------------------------------------------------------
 
 \textbf{How it works.} Recursively split the put right at the next rung. For a put
@@ -416,22 +672,22 @@ lower-strike put that is carried further down the ladder.
 \PNat{S_{i-1}}
 &=(\Put_{S_{i-1}}-\Put_{S_i})+\Put_{S_i},\\
 \PNat{S_{i-1}}
-&=\PNPi{i}+\PNNi{i}.
+&=\PNPi{S_i}+\PNNi{S_i}.
 \end{align}
 
 \textbf{Clearing (settlement).}
 \begin{align}
-\PNPi{i}(X_m)
+\PNPi{S_i}(X_m)
 &=\pos{S_{i-1}-X_m}-\pos{S_i-X_m},\\
 &=\min\!\left(\max(0,S_{i-1}-X_m),\,S_{i-1}-S_i\right),\\
-\PNNi{i}(X_m)
+\PNNi{S_i}(X_m)
 &=\pos{S_i-X_m}=\max(0,S_i-X_m).
 \end{align}
-Sign convention check: $S_{i-1}-S_i>0$ (put strikes decrease), so $\PNPi{i}(X_m)\ge 0$
+Sign convention check: $S_{i-1}-S_i>0$ (put strikes decrease), so $\PNPi{S_i}(X_m)\ge 0$
 and is capped at $S_{i-1}-S_i$.
 
 \todo{Split + clearing diagram for the bear put spread (zoom-in: $\PN \to \PNP + \PNN$ at strike $S_i$).}
-\todo{Settlement chart: $\PNPi{i}(X_m)$ vs.\ underlying USD price $X_m$ (flat cap $S_{i-1}-S_i$, ramp $S_i\!\to\!S_{i-1}$, flat $0$).}
+\todo{Settlement chart: $\PNPi{S_i}(X_m)$ vs.\ underlying USD price $X_m$ (flat cap $S_{i-1}-S_i$, ramp $S_i\!\to\!S_{i-1}$, flat $0$).}
 \todo{Settlement table for this tranche across $X_m$ (the $\PNP$ column of the combined table in Section~4.4).}
 
 % ---------------------------------------------------------------------
@@ -441,7 +697,7 @@ and is capped at $S_{i-1}-S_i$.
 After recursively splitting to $S_n$, the full put-side ladder identity is
 \begin{align}
 S_0
-&=\CSPR_{S_0}(X_m)+\sum_{i=1}^{n}\BPSR_i(X_m)+\Put_{S_n}(X_m),\\
+&=\CSPR(X_m)+\sum_{i=1}^{n}\BPSR_{S_i}(X_m)+\Put_{S_n}(X_m),\\
 &=\min(X_m,S_0)
 +\sum_{i=1}^{n}\left[\pos{S_{i-1}-X_m}-\pos{S_i-X_m}\right]
 +\pos{S_n-X_m},\\
@@ -489,14 +745,14 @@ $X_m$ & $\PP$ & $\PNP$ & $\PNN$ & Total \\
 
 Figure~\ref{fig:ladder} renders the construction of Sections~3--4 as a state machine over
 the two collateral states---the underlying $T$ and cash $C$. Each red entry arrow splits
-its state into an obligation residual ($\CP$/$\PP$, i.e.\ the $\CCR$/$\CSPR$ residual) and
-a right ($\CN$/$\PN$); recall $X_m$ is the terminal underlying price and $S$ the relevant
+its state into an obligation residual ($\CP$ or $\PP$) and a right ($\CN$ or $\PN$);
+recall $X_m$ is the terminal underlying price and $S$ the relevant
 strike. At maturity the covered-call residual $\CCR$ converts the underlying into cash when
 the call finishes in the money ($X_m\ge S$) and retains $T$ otherwise ($X_m<S$); its
 mirror, the cash-secured-put residual $\CSPR$, converts cash into $T$ when the put finishes
 in the money ($X_m\le S$) and keeps cash otherwise ($X_m>S$). The right legs decompose
-recursively along the strike ladder into the bull/bear vertical-spread residuals
-$\BCSR$/$\BPSR$ of Sections~3.3 and~4.3. This is the cycle that connects the two collateral
+recursively along the strike ladder into the bull and bear vertical-spread residuals
+$\BCSR$ and $\BPSR$ of Sections~3.2 and~4.3. This is the cycle that connects the two
 states across maturities, and it is where time enters: each clearing re-mints collateral
 into the opposite state. The closed forms for every quantity labeling the graph are
 collected after the figure.
@@ -518,26 +774,26 @@ collected after the figure.
 % (T base-split equation: moved below the figure)
 
 % ============ BCSR boxes (top) ============
-\node[box] (bcsr1) at (2.6,9.0) {$\mathrm{CALL}_{s_0}-\mathrm{CALL}_{s_1}$};
+\node[box] (bcsr1) at (2.6,9.0) {$\mathrm{CALL}_{S_0}-\mathrm{CALL}_{S_1}$};
 \node[align=center, font=\small, color=wbblue] at (2.6,9.85) {BCSR};
 
-\node[box] (bcsr2top) at (11.0,9.0) {$\mathrm{CALL}_{s_{i-1}}-\mathrm{CALL}_{s_i}$};
+\node[box] (bcsr2top) at (11.0,9.0) {$\mathrm{CALL}_{S_{i-1}}-\mathrm{CALL}_{S_i}$};
 \node[align=center, font=\small, color=wbblue] at (11.0,9.85) {BCSR};
-\node[box] (bcsr2bot) at (11.0,7.0) {$+\mathrm{CALL}_{s_i}$};
+\node[box] (bcsr2bot) at (11.0,7.0) {$+\mathrm{CALL}_{S_i}$};
 \node at (11.0,8.0) {$+$};
 
 % (CALL-NP / CALL-NN payoffs: moved below the figure)
 
 % ============ +CALL boxes (middle-upper) ============
-\node[box] (callS0) at (2.6,6.6) {$+\mathrm{CALL}_{s_0}$};
-\node[box] (callS1) at (5.8,6.6) {$+\mathrm{CALL}_{s_1}$};
+\node[box] (callS0) at (2.6,6.6) {$+\mathrm{CALL}_{S_0}$};
+\node[box] (callS1) at (5.8,6.6) {$+\mathrm{CALL}_{S_1}$};
 
 % ============ Entry arrow T (big arrow, left) ============
 \node[single arrow, draw, line width=0.8pt, minimum width=1.4cm, minimum height=2.4cm,
       single arrow head extend=2mm, color=wbred, rotate=0] (Tentry) at (0.6,4.9) {\color{black}\large $T$};
 
 % ============ CCR: T - CALL_s0 ============
-\node[box] (ccr) at (4.0,4.9) {$T-\mathrm{CALL}_{s_0}$};
+\node[box] (ccr) at (4.0,4.9) {$T-\mathrm{CALL}_{S_0}$};
 \node[align=center, font=\small, color=wbblue] at (4.0,5.75) {CCR};
 
 % ============ Cash ellipse ============
@@ -547,7 +803,7 @@ collected after the figure.
 \node[ell] (Tell) at (4.0,2.4) {$T$};
 
 % ============ CSPR: Cash - PUT_s0 ============
-\node[box] (cspr) at (8.7,2.4) {$\mathrm{Cash}-\mathrm{PUT}_{s_0}$};
+\node[box] (cspr) at (8.7,2.4) {$\mathrm{Cash}-\mathrm{PUT}_{S_0}$};
 \node[align=center, font=\small, color=wbgreen] at (8.7,1.55) {CSPR};
 
 % ============ Cash entry arrow (right) ============
@@ -555,15 +811,15 @@ collected after the figure.
       single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black} Cash};
 
 % ============ +PUT boxes ============
-\node[box] (putS0) at (9.7,0.1) {$+\mathrm{PUT}_{s_0}$};
-\node[box] (putS1) at (6.5,0.1) {$+\mathrm{PUT}_{s_1}$};
-\node[box] (bpsr1) at (9.7,-2.3) {$\mathrm{PUT}_{s_0}-\mathrm{PUT}_{s_1}$};
+\node[box] (putS0) at (9.7,0.1) {$+\mathrm{PUT}_{S_0}$};
+\node[box] (putS1) at (6.5,0.1) {$+\mathrm{PUT}_{S_1}$};
+\node[box] (bpsr1) at (9.7,-2.3) {$\mathrm{PUT}_{S_0}-\mathrm{PUT}_{S_1}$};
 \node[align=center, font=\small, color=wbgreen] at (9.7,-3.15) {BPSR};
 
 % ============ General-step vertical stack (+PUT_si over PUT_{si-1}-PUT_si) ============
-\node[box] (putSi) at (1.8,-0.3) {$+\mathrm{PUT}_{s_i}$};
+\node[box] (putSi) at (1.8,-0.3) {$+\mathrm{PUT}_{S_i}$};
 \node at (1.8,-1.3) {$+$};
-\node[box] (bpsr2) at (1.8,-2.3) {$\mathrm{PUT}_{s_{i-1}}-\mathrm{PUT}_{s_i}$};
+\node[box] (bpsr2) at (1.8,-2.3) {$\mathrm{PUT}_{S_{i-1}}-\mathrm{PUT}_{S_i}$};
 \node[align=center, font=\small, color=wbgreen] at (1.8,-3.15) {BPSR};
 
 % (Cash base-split equation: moved below the figure)
@@ -572,10 +828,10 @@ collected after the figure.
 
 % ===================== ARROWS =====================
 
-% +CALL_{s_0} fans out: spread residual (CALL_{s_0}-CALL_{s_1}) and carry (+CALL_{s_1})
+% +CALL_{S_0} fans out: spread residual (CALL_{S_0}-CALL_{S_1}) and carry (+CALL_{S_1})
 \draw[arrline] (callS0) -- (callS1);
 \draw[arrline] (callS0.north) -- (bcsr1.south);
-% +CALL_{s_1} -> up then right (90 deg) -> ... -> middle of the general-step stack
+% +CALL_{S_1} -> up then right (90 deg) -> ... -> middle of the general-step stack
 \node (ccdots) at (8.4,8.0) {$\cdots$};
 \draw[arrline] (callS1.north) |- (ccdots.west);
 \draw[arrline] (ccdots.east) -- ($(bcsr2top.west)!0.5!(bcsr2bot.west)$);
@@ -613,7 +869,7 @@ collected after the figure.
 \draw[arrline] (putS0.west) -- (putS1.east);
 % putS0 -> straight down -> middle of bpsr1
 \draw[arrline] (putS0.south) -- (bpsr1.north);
-% +PUT_{s_1} -> down then left (90 deg) -> ... -> middle of the general-step stack
+% +PUT_{S_1} -> down then left (90 deg) -> ... -> middle of the general-step stack
 \node (pcdots) at (4.7,-1.3) {$\cdots$};
 \draw[arrline] (putS1.south) |- (pcdots.east);
 \draw[arrline] (pcdots.west) -- ($(putSi.east)!0.5!(bpsr2.east)$);
@@ -621,7 +877,7 @@ collected after the figure.
 % Tell -> back to entry T (blue feedback loop, lower)
 \draw[arrline] (Tell.west) -| (Tentry.south);
 
-% (removed return path: keep a single arrow T -> +CALL_{s_0})
+% (removed return path: keep a single arrow T -> +CALL_{S_0})
 
 % ===================== LEGEND (bottom-left) =====================
 \begin{scope}[shift={(0,-4.0)}]
@@ -663,8 +919,8 @@ T = \underbrace{(T-\Call)}_{\CP} + \underbrace{\Call}_{\CN},
 
 \textit{Per-bucket spread and tail payoffs:}
 \begin{align*}
-\CNPi{i} &= \min\!\big(\max(0,X_m-S_{i-1}),\,S_i-S_{i-1}\big), & \CNNi{i} &= \max(0,X_m-S_i),\\
-\PNPi{i} &= \min\!\big(\max(0,S_{i-1}-X_m),\,S_{i-1}-S_i\big), & \PNNi{i} &= \max(0,S_i-X_m).
+\CNPi{S_i} &= \min\!\big(\max(0,X_m-S_{i-1}),\,S_i-S_{i-1}\big), & \CNNi{S_i} &= \max(0,X_m-S_i),\\
+\PNPi{S_i} &= \min\!\big(\max(0,S_{i-1}-X_m),\,S_{i-1}-S_i\big), & \PNNi{S_i} &= \max(0,S_i-X_m).
 \end{align*}
 
 % =====================================================================
@@ -697,15 +953,15 @@ Label & Formula / meaning \\
 \midrule
 $\CP$ / $\CCR$ & Covered call residual: $\min(X_m,S_0)$. \\
 $\CN$ & Call right (long call): $\max(0,X_m-S_0)$. \\
-$\CNP$ / $\BCSR$ & Bull call spread residual: $\min(\max(0,X_m-S_{i-1}),S_i-S_{i-1})$. \\
+$\CNP$ / $\BCSR_{S_i}$ & Bull call spread residual: $\min(\max(0,X_m-S_{i-1}),S_i-S_{i-1})$. \\
 $\CNN$ & Higher-strike tail call: $\max(0,X_m-S_i)$. \\
 $\PP$ / $\CSPR$ & Cash-secured put residual: $\min(X_m,S_0)$. \\
 $\PN$ & Put right (long put): $\max(0,S_0-X_m)$. \\
-$\PNP$ / $\BPSR$ & Bear put spread residual: $\min(\max(0,S_{i-1}-X_m),S_{i-1}-S_i)$. \\
+$\PNP$ / $\BPSR_{S_i}$ & Bear put spread residual: $\min(\max(0,S_{i-1}-X_m),S_{i-1}-S_i)$. \\
 $\PNN$ & Lower-strike tail put: $\max(0,S_i-X_m)$. \\
 \bottomrule
 \end{longtable}
 
-\todo{Master worked example combining both sides + the wheel cycle across two maturities (extends the per-side numerical checks of Sections~3.4 and~4.4).}
+\todo{Master worked example combining both sides + the wheel cycle across two maturities (extends the per-side numerical checks of Sections~3.3 and~4.4).}
 
 \end{document}
