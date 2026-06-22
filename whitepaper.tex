@@ -449,7 +449,11 @@ payoffs (USD settlement value vs.\ underlying price $X_m$):
 
 The long-call token $\CN$ is itself split at the next rung. For a call ladder with
 increasing strikes $S_0<S_1<\cdots<S_n$, each lower-strike call right splits into a capped
-bull-call-spread residual plus the higher-strike call carried further down the ladder.
+bull-call-spread residual plus the higher-strike call carried further down the ladder. The
+call right is tokenized into a further right $N$ and a residual $P$:
+\[
+\CN = (N,P) \;\longmapsto\; \CNN\ \text{(higher-strike tail call)} \;+\; \CNP\ \text{(bull-call-spread residual)} .
+\]
 
 \textbf{(a) Splitting.} For $i=0,\dots,n-1$, the call right $\CNat{S_i}$ is split at the
 next strike $S_{i+1}$:
@@ -704,7 +708,11 @@ payoffs (USD settlement value vs.\ underlying price $X_m$):
 
 The long-put token $\PN$ is itself split at the next rung. For a put ladder with
 \emph{decreasing} strikes $S_0>S_1>\cdots>S_n$, each higher-strike put right splits into a
-capped bear-put-spread residual plus the lower-strike put carried further down the ladder.
+capped bear-put-spread residual plus the lower-strike put carried further down the ladder. The
+put right is tokenized into a further right $N$ and a residual $P$:
+\[
+\PN = (N,P) \;\longmapsto\; \PNN\ \text{(lower-strike tail put)} \;+\; \PNP\ \text{(bear-put-spread residual)} .
+\]
 
 \textbf{(a) Splitting.} For $i=0,\dots,n-1$, the put right $\PNat{S_i}$ is split at the
 next (lower) strike $S_{i+1}$:
