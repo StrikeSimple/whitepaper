@@ -215,7 +215,7 @@ $\BPSR_{S_i}$ (PUT\_NP) & Bear-put-spread residual token at the $i$-th split ($i
 \node[align=center, font=\small, color=wbblue] at (4.0,5.75) {CCR};
 
 % ============ Cash ellipse ============
-\node[ell] (cash1) at (8.7,4.9) {Cash};
+\node[ell] (cash1) at (8.7,4.9) {$\mathrm{Cash}$};
 
 % ============ T ellipse (lower) ============
 \node[ell] (Tell) at (4.0,2.4) {$T$};
@@ -226,7 +226,7 @@ $\BPSR_{S_i}$ (PUT\_NP) & Bear-put-spread residual token at the $i$-th split ($i
 
 % ============ Cash entry arrow (right) ============
 \node[single arrow, draw, line width=0.8pt, minimum width=1.4cm, minimum height=2.4cm,
-      single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black} Cash};
+      single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black}$\mathrm{Cash}$};
 
 % ============ +PUT boxes ============
 \node[box] (putS0) at (9.7,0.1) {$+\mathrm{PUT}_{S_0}$};
@@ -298,7 +298,7 @@ $\BPSR_{S_i}$ (PUT\_NP) & Bear-put-spread residual token at the $i$-th split ($i
 % (removed return path: keep a single arrow T -> +CALL_{S_0})
 
 % ===================== LEGEND (bottom-left) =====================
-\begin{scope}[shift={(0,-4.0)}]
+\begin{scope}[shift={(0,-4.0)},font=\rmfamily]
   \node[single arrow, draw, color=wbred, line width=0.8pt, minimum width=0.6cm,
         minimum height=1.1cm, single arrow head extend=1.5mm] (le) at (0,0) {};
   \node[anchor=west, color=wbred] at (0.7,0) {: entry};
@@ -965,17 +965,17 @@ T = \underbrace{(T-\Call)}_{\CP} + \underbrace{\Call}_{\CN},
 
 \textit{Call side, increasing strikes $S_0<S_1<\cdots<S_n$ (conserves to $X_m$):}
 \begin{align}
-X_m
+T
 &= \underbrace{\min(X_m,S_0)}_{\text{covered-call residual}}
-+ \sum_{i=1}^{n}\underbrace{\min\!\left(\max(0,X_m-S_{i-1}),S_i-S_{i-1}\right)}_{\text{bull call spread residual}}
++ \sum_{i=0}^{n}\underbrace{\min\!\left(\max(0,X_m-S_{i}),S_{i+1}-S_{i}\right)}_{\text{bull call spread residual}}
 + \underbrace{\max(0,X_m-S_n)}_{\text{tail call}}.
 \end{align}
 
 \textit{Put side, decreasing strikes $S_0>S_1>\cdots>S_n$ (conserves to $S_0$):}
 \begin{align}
-S_0
+C
 &= \underbrace{\min(X_m,S_0)}_{\text{cash-secured-put residual}}
-+ \sum_{i=1}^{n}\underbrace{\min\!\left(\max(0,S_{i-1}-X_m),S_{i-1}-S_i\right)}_{\text{bear put spread residual}}
++ \sum_{i=0}^{n}\underbrace{\min\!\left(\max(0,S_{i}-X_m),S_{i}-S_{i+1}\right)}_{\text{bear put spread residual}}
 + \underbrace{\max(0,S_n-X_m)}_{\text{tail put}}.
 \end{align}
 
