@@ -350,7 +350,7 @@ $X_m$ (Section~3.3).
 \node[font=\small, color=wbblue] at (3.1,3.95) {$\CN$};
 \node[box] (ccr) at (3.1,1.3) {$T-\mathrm{CALL}_{S_0}$};
 \node[font=\small, color=wbblue] at (3.1,2.05) {$\CP$ (CCR)};
-\node[ell] (cash1) at (6.9,1.3) {Cash};
+\node[ell] (cash1) at (6.9,1.3) {$\mathrm{Cash}$};
 \node[ell] (Tell) at (3.1,-0.7) {$T$};
 \draw[arrline] (Tentry.north) |- (callS0.west);
 \draw[arrline] (Tentry.east) -- (ccr.west);
@@ -605,13 +605,13 @@ fixed cash value $S_0$ (Section~4.3) --- not to $X_m$, the key asymmetry with th
   arrline/.style={->, line width=0.8pt},
 ]
 \node[single arrow, draw, line width=0.8pt, minimum width=1.25cm, minimum height=1.5cm,
-      single arrow head extend=1.5mm, color=wbred] (Centry) at (0,1.3) {\color{black} Cash};
+      single arrow head extend=1.5mm, color=wbred] (Centry) at (0,1.3) {\color{black}$\mathrm{Cash}$};
 \node[box] (putS0) at (3.3,3.2) {$+\mathrm{PUT}_{S_0}$};
 \node[font=\small, color=wbgreen] at (3.3,3.95) {$\PN$};
 \node[box] (cspr) at (3.3,1.3) {$\mathrm{Cash}-\mathrm{PUT}_{S_0}$};
 \node[font=\small, color=wbgreen] at (3.3,2.05) {$\PP$ (CSPR)};
 \node[ell] (Tres) at (7.1,1.3) {$T$};
-\node[ell] (cashRes) at (3.3,-0.7) {Cash};
+\node[ell] (cashRes) at (3.3,-0.7) {$\mathrm{Cash}$};
 \draw[arrline] (Centry.north) |- (putS0.west);
 \draw[arrline] (Centry.east) -- (cspr.west);
 \draw[arrline] (cspr.east) -- node[pos=0.5,above,font=\small] {$X_m\le S$} (Tres.west);
@@ -864,7 +864,7 @@ call side ($S_0=2000$, $S_1=1500$):
 \node[align=center, font=\small, color=wbblue] at (4.0,5.75) {CCR};
 
 % ============ Cash ellipse ============
-\node[ell] (cash1) at (8.7,4.9) {Cash};
+\node[ell] (cash1) at (8.7,4.9) {$\mathrm{Cash}$};
 
 % ============ T ellipse (lower) ============
 \node[ell] (Tell) at (4.0,2.4) {$T$};
@@ -875,7 +875,7 @@ call side ($S_0=2000$, $S_1=1500$):
 
 % ============ Cash entry arrow (right) ============
 \node[single arrow, draw, line width=0.8pt, minimum width=1.4cm, minimum height=2.4cm,
-      single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black} Cash};
+      single arrow head extend=2mm, color=wbred, shape border rotate=180] (cashentry) at (12.2,2.4) {\color{black}$\mathrm{Cash}$};
 
 % ============ +PUT box (base-split put right) ============
 \node[box] (putS0) at (9.7,0.1) {$+\mathrm{PUT}_{S_0}$};
